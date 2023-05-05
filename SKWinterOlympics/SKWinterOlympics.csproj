@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -7,15 +7,6 @@
     <Nullable>enable</Nullable>
     <UserSecretsId>05308609-eeaa-45e6-ad06-605c0b1700c1</UserSecretsId>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="appsettings.json" />
-    <None Remove="README.md" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="README.md" />
-  </ItemGroup>
 
   <ItemGroup>
     <Content Include="appsettings.json">
