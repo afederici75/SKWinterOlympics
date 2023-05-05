@@ -1,6 +1,5 @@
-﻿// https://github.com/openai/openai-cookbook/blob/main/examples/Question_answering_using_embeddings.ipynb?ref=mlq.ai
+﻿#region -------------- Loads configuration --------------
 
-// Loads configuration
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json")
     .AddUserSecrets(Assembly.GetExecutingAssembly())
@@ -12,11 +11,22 @@ services.Configure<SemanticKernelOptions>(config.GetSection("SemanticKernel"));
 var svcProvider = services.BuildServiceProvider();
 var options = svcProvider.GetRequiredService<IOptions<SemanticKernelOptions>>()
                          .Value;
+if (string.IsNullOrWhiteSpace(options.ApiKey))
+    throw new Exception("OpenAI API key is missing. Please add it to the user secrets.");
+
+#endregion
+
+#region -------------- Loads the CSV into the memory store --------------
 
 // Loads the CSV into the memory store
 IMemoryStore memoryStore = new VolatileMemoryStore();
-CsvLoader csvLoader = new CsvLoader(memoryStore);
-Console.WriteLine("Loading CSV file...");
+CsvLoader csvLoader = new (memoryStore);
+csvLoader.MemoryRecordLoaded += (index, rec) =>
+{ 
+    if (index % 1000==0)
+        Console.WriteLine($"Loaded {index} memory records...");
+};
+Console.WriteLine("Loading CSV file (It might take a minute or so the first time)...");
 
 const string CollectionName = "winterOlympics";
 
@@ -25,6 +35,8 @@ await csvLoader.InitializeAsync(CollectionName);
 // Creates a semantic memory. We'll use use this below to find semantic matches
 OpenAITextEmbeddingGeneration gen = new(options.EmbeddingModel, options.ApiKey);
 ISemanticTextMemory memory = new SemanticTextMemory(memoryStore, gen);
+
+#endregion
 
 var predefinedQuestions = new[] {
     "Which athletes won the gold medal in curling at the 2022 Winter Olympics?",
@@ -36,6 +48,8 @@ var predefinedQuestions = new[] {
     "Who won the gold medal in curling at the 2018 Winter Olympics?" // question outside of the scope  
 };
 
+var defColor = Console.ForegroundColor;
+var questionIndex = -1;
 
 while (true)
 {
@@ -45,9 +59,15 @@ while (true)
 
     if (string.IsNullOrWhiteSpace(question))
     {
-        var rnd = new Random();
-        question = predefinedQuestions[rnd.Next(predefinedQuestions.Length - 1)];
+        if (questionIndex < predefinedQuestions.Length - 1)
+            questionIndex++;
+        else 
+            questionIndex = 0; 
+        question = predefinedQuestions[questionIndex];
+
+        Console.ForegroundColor = ConsoleColor.Green;
         Console.WriteLine("RANDOM QUESTION: " + question);
+        Console.ForegroundColor = defColor;
     }
 
     // Looks for semantic matches in the local data
@@ -59,10 +79,9 @@ while (true)
         semanticMatches += $"\n\nWikipedia article section:\n{localMatch.Metadata.Text}\n";
     }
 
-    // Ask the question        
+    // Ask the question using the semantic matches as context
     IChatCompletion chatCompletion = new OpenAIChatCompletion(options.Model, options.ApiKey);
-    ChatHistory newChat = chatCompletion.CreateNewChat(
-        instructions: "You answer questions about the 2022 Winter Olympics.");
+    ChatHistory newChat = chatCompletion.CreateNewChat(instructions: "You answer questions about the 2022 Winter Olympics.");
 
     var ask = "Use the below articles on the 2022 Winter Olympics to answer the subsequent question. " +
                "If the answer cannot be found in the articles, write 'I could not find an answer.'\n" +
@@ -77,8 +96,11 @@ while (true)
     });
 
     Console.WriteLine("------------------------------------------------------");
+    Console.ForegroundColor = ConsoleColor.Cyan;
     Console.WriteLine($"QUESTION: {question}");
-    Console.WriteLine($"RESPONSE:\n{response}");
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine($"RESPONSE: {response}");
     //Console.WriteLine($"SEMANTIC MATCHES:\n{semanticMatches}");
     Console.WriteLine("------------------------------------------------------");   
+    Console.ForegroundColor = defColor; 
 }

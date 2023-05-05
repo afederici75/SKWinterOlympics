@@ -23,9 +23,9 @@ public class CsvEmbeddingRecord
             isReference: true,
             id: key,
             text: Text,
-            description: null,
-            externalSourceName: null,
-            additionalMetadata: null);
+            description: string.Empty,
+            externalSourceName: string.Empty,
+            additionalMetadata: string.Empty);
 
         return new MemoryRecord(meta, e, null);
     }

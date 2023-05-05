@@ -12,9 +12,11 @@ public class CsvLoader
         MemoryStore = memoryStore ?? throw new ArgumentNullException(nameof(memoryStore));
     }
 
+    public event Action<int, MemoryRecord> MemoryRecordLoaded;
+
     public IMemoryStore MemoryStore { get; }
 
-    public Task DisposeAsync() => Task.CompletedTask;
+    public static Task DisposeAsync() => Task.CompletedTask;
 
     public async Task InitializeAsync(string collectionName)
     {
@@ -22,13 +24,15 @@ public class CsvLoader
 
         await MemoryStore.CreateCollectionAsync(collectionName);
 
-        await foreach (var rec in LoadLocalEmbeddingsAsync(MemoryStore))
+        int i = 1;
+        await foreach (MemoryRecord rec in LoadLocalEmbeddingsAsync())
         {
             await MemoryStore.UpsertAsync(collectionName, rec);
+            MemoryRecordLoaded?.Invoke(i++, rec); 
         }
     }
     
-    async Task DownloadHugeCsvIfNecessary(CancellationToken cancellationToken)
+    async static Task DownloadHugeCsvIfNecessary(CancellationToken cancellationToken)
     {
         string dir = Path.GetDirectoryName(CsvFileName)!;
 
@@ -40,15 +44,13 @@ public class CsvLoader
 
         using var client = new HttpClient();
 
-        using (var stream = await client.GetStreamAsync(CsvUrl, cancellationToken))
-        {
-            using var fileStream = File.Create(CsvFileName);
+        using var stream = await client.GetStreamAsync(CsvUrl, cancellationToken);
+        using var fileStream = File.Create(CsvFileName);
 
-            await stream.CopyToAsync(fileStream, cancellationToken);
-        }
+        await stream.CopyToAsync(fileStream, cancellationToken);        
     }
 
-    async IAsyncEnumerable<MemoryRecord> LoadLocalEmbeddingsAsync(IMemoryStore store, [EnumeratorCancellation] CancellationToken cancellation = default)
+    async static IAsyncEnumerable<MemoryRecord> LoadLocalEmbeddingsAsync([EnumeratorCancellation] CancellationToken cancellation = default)
     {
         // Reads the 209Mb file of the example https://github.com/openai/openai-cookbook/blob/main/examples/Question_answering_using_embeddings.ipynb?ref=mlq.ai
         await DownloadHugeCsvIfNecessary(cancellation);
@@ -56,7 +58,7 @@ public class CsvLoader
         using var csvStream = new StreamReader(CsvFileName);
         using var csvReader = new CsvReader(csvStream, CultureInfo.InvariantCulture);
 
-        await foreach (var rec in csvReader.GetRecordsAsync<CsvEmbeddingRecord>())
+        await foreach (var rec in csvReader.GetRecordsAsync<CsvEmbeddingRecord>(cancellation))
         {
             yield return rec.ToMemoryRecord();
         }
