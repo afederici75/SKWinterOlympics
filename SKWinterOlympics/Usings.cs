@@ -1,0 +1,12 @@
+﻿global using Microsoft.SemanticKernel.Memory;
+global using System.Globalization;
+global using System.Runtime.CompilerServices;
+global using Microsoft.SemanticKernel.AI.Embeddings;
+global using Microsoft.Extensions.Configuration;
+global using System.Reflection;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.SemanticKernel.AI.ChatCompletion;
+global using Microsoft.SemanticKernel.Connectors.AI.OpenAI.ChatCompletion;
+global using Microsoft.SemanticKernel.Connectors.AI.OpenAI.TextEmbedding;
+global using SKWinterOlympics;
+global using Microsoft.Extensions.Options;
