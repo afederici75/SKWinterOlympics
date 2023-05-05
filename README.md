@@ -77,7 +77,7 @@ These are the questions that are currently configured:
 var predefinedQuestions = new[] {
     "Which athletes won the gold medal in curling at the 2022 Winter Olympics?",
     "who winned gold metals in kurling at the olimpics",  // misspelled question
-    "How many records were set at the 2022 Winter Olympics?", // counting question SOMEHOW I GET NO COUNT? Model issue?
+    "How many records were set at the 2022 Winter Olympics?", // counting question
     "Did Jamaica or Cuba have more athletes at the 2022 Winter Olympics?", // comparison question
     "What is 2+2?", // question outside of the scope
     "Which Olympic sport is the most entertaining?", // subjective question
