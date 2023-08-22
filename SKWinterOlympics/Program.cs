@@ -1,28 +1,24 @@
-﻿#region -------------- Loads configuration --------------
+﻿#region -------------- Setup dependency injection --------------
 
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json")
     .AddUserSecrets(Assembly.GetExecutingAssembly())
     .Build();
 
-var services = new ServiceCollection();
-services.AddSingleton<IMemoryStore, VolatileMemoryStore>();
-services.AddSingleton<CsvLoader, CsvLoader>();
-services.Configure<SemanticKernelOptions>(config.GetSection("SemanticKernel"));
+var serviceProvider = new ServiceCollection()
+    .AddSKWinterOlympics(config)
+    .BuildServiceProvider();
 
-var svcProvider = services.BuildServiceProvider();
-var options = svcProvider.GetRequiredService<IOptions<SemanticKernelOptions>>()
-                         .Value;
-if (string.IsNullOrWhiteSpace(options.ApiKey))
-    throw new Exception("OpenAI API key is missing. Please add it to the user secrets.");
+var options = serviceProvider.GetRequiredService<IOptions<SemanticKernelOptions>>().Value;
+options.Validate(); // Make sure to provide an OpenAI API key in user secrets.
 
 #endregion
 
-#region -------------- Loads the CSV into the memory store --------------
+#region -------------- Load the CSV into the memory store --------------
 
 // Loads the CSV into the memory store
-var memoryStore = svcProvider.GetRequiredService<IMemoryStore>();
-var csvLoader = svcProvider.GetRequiredService<CsvLoader>();
+var memoryStore = serviceProvider.GetRequiredService<IMemoryStore>();
+var csvLoader = serviceProvider.GetRequiredService<CsvLoader>();
 
 csvLoader.MemoryRecordLoaded += (index, rec) =>
 { 
