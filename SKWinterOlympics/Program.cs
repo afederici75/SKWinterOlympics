@@ -6,6 +6,8 @@ var config = new ConfigurationBuilder()
     .Build();
 
 var services = new ServiceCollection();
+services.AddSingleton<IMemoryStore, VolatileMemoryStore>();
+services.AddSingleton<CsvLoader, CsvLoader>();
 services.Configure<SemanticKernelOptions>(config.GetSection("SemanticKernel"));
 
 var svcProvider = services.BuildServiceProvider();
@@ -19,8 +21,9 @@ if (string.IsNullOrWhiteSpace(options.ApiKey))
 #region -------------- Loads the CSV into the memory store --------------
 
 // Loads the CSV into the memory store
-IMemoryStore memoryStore = new VolatileMemoryStore();
-CsvLoader csvLoader = new (memoryStore);
+var memoryStore = svcProvider.GetRequiredService<IMemoryStore>();
+var csvLoader = svcProvider.GetRequiredService<CsvLoader>();
+
 csvLoader.MemoryRecordLoaded += (index, rec) =>
 { 
     if (index % 1000==0)
