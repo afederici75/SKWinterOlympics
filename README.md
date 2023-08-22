@@ -21,23 +21,18 @@ Make sure the user secrets are populated with the following entry:
 Program.cs begins by loading the configuration.
 
 ```csharp
-#region -------------- Loads configuration --------------
-
+// -------------- Setup dependency injection --------------
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json")
     .AddUserSecrets(Assembly.GetExecutingAssembly())
     .Build();
 
-var services = new ServiceCollection();
-services.Configure<SemanticKernelOptions>(config.GetSection("SemanticKernel"));
+var serviceProvider = new ServiceCollection()
+    .AddSKWinterOlympics(config)
+    .BuildServiceProvider();
 
-var svcProvider = services.BuildServiceProvider();
-var options = svcProvider.GetRequiredService<IOptions<SemanticKernelOptions>>()
-                         .Value;
-if (string.IsNullOrWhiteSpace(options.ApiKey))
-    throw new Exception("OpenAI API key is missing. Please add it to the user secrets.");
-
-#endregion
+var options = serviceProvider.GetRequiredService<IOptions<SemanticKernelOptions>>().Value;
+options.Validate(); // Make sure to provide an OpenAI API key in user secrets.
 ```
 
 It will then download the CSV file (if it is not already present on disk) and instantiate an IMemoryStore to hold the data.
@@ -45,11 +40,10 @@ It will then download the CSV file (if it is not already present on disk) and in
 The file will be saved under bin\Debug\net7.0\TestData and it's about 213Mb in size.
 
 ```csharp
-#region -------------- Loads the CSV into the memory store --------------
+// -------------- Load the CSV into the memory store --------------
+var memoryStore = serviceProvider.GetRequiredService<IMemoryStore>();
+var csvLoader = serviceProvider.GetRequiredService<CsvLoader>();
 
-// Loads the CSV into the memory store
-IMemoryStore memoryStore = new VolatileMemoryStore();
-CsvLoader csvLoader = new (memoryStore);
 csvLoader.MemoryRecordLoaded += (index, rec) =>
 { 
     if (index % 1000==0)
@@ -61,11 +55,9 @@ const string CollectionName = "winterOlympics";
 
 await csvLoader.InitializeAsync(CollectionName);
 
-// Creates a semantic memory. We'll use use this below to find semantic matches
+// Creates a semantic text memory. We'll use use this below to find semantic matches
 OpenAITextEmbeddingGeneration gen = new(options.EmbeddingModel, options.ApiKey);
 ISemanticTextMemory memory = new SemanticTextMemory(memoryStore, gen);
-
-#endregion
 ```
 
 Once the above is complete, it will ask the user to enter a question and it will find the most relevant answer by using IMemoryStore.
@@ -74,6 +66,7 @@ If the user does not enter a question, the application will pick the next pre-co
 These are the questions that are currently configured:
 
 ```csharp
+// -------------- Running app --------------
 var predefinedQuestions = new[] {
     "Which athletes won the gold medal in curling at the 2022 Winter Olympics?",
     "who winned gold metals in kurling at the olimpics",  // misspelled question

@@ -8,8 +8,6 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-
-
         services.AddSingleton<IMemoryStore, VolatileMemoryStore>();
         services.AddSingleton<CsvLoader, CsvLoader>();
         services.Configure<SemanticKernelOptions>(

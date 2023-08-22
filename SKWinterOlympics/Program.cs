@@ -1,4 +1,4 @@
-﻿#region -------------- Setup dependency injection --------------
+﻿// -------------- Setup dependency injection --------------
 
 var config = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json")
@@ -12,11 +12,8 @@ var serviceProvider = new ServiceCollection()
 var options = serviceProvider.GetRequiredService<IOptions<SemanticKernelOptions>>().Value;
 options.Validate(); // Make sure to provide an OpenAI API key in user secrets.
 
-#endregion
+// -------------- Load the CSV into the memory store --------------
 
-#region -------------- Load the CSV into the memory store --------------
-
-// Loads the CSV into the memory store
 var memoryStore = serviceProvider.GetRequiredService<IMemoryStore>();
 var csvLoader = serviceProvider.GetRequiredService<CsvLoader>();
 
@@ -31,11 +28,11 @@ const string CollectionName = "winterOlympics";
 
 await csvLoader.InitializeAsync(CollectionName);
 
-// Creates a semantic memory. We'll use use this below to find semantic matches
+// Creates a semantic text memory. We'll use use this below to find semantic matches
 OpenAITextEmbeddingGeneration gen = new(options.EmbeddingModel, options.ApiKey);
 ISemanticTextMemory memory = new SemanticTextMemory(memoryStore, gen);
 
-#endregion
+// -------------- Running app --------------
 
 var predefinedQuestions = new[] {
     "Which athletes won the gold medal in curling at the 2022 Winter Olympics?",
